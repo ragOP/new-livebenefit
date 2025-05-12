@@ -7,6 +7,7 @@ import ChatbotFour from './ChatbotFour';
 import Chatbotdq from './Chatbotdq';
 import Chatbotdq2 from './Chatbotdq2';
 import Home from './Home';
+import FastChat from './FastChat';
 
 const App = () => {
   // sdss
@@ -18,6 +19,7 @@ const App = () => {
         <Route path="/engsfdq" element={<Chatbotdq2 />} />
         <Route path="/engsf2200" element={<ChatbotTwo />} />
         <Route path="/engsf1dup" element={<Chatbotdq2 />} />
+        <Route path="/engsffast" element={<FastChat />} />
         <Route path="/engsf2200dup" element={<ChatbotFour />} />
       </Routes>
     </Router>
