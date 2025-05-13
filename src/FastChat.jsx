@@ -67,7 +67,7 @@ export default function Chatbot() {
           if (response.options) setCurrentOptions(response.options);
           if (response.input) setShowInput(true);
         }
-      }, (delay += 500));
+      }, (delay += 1000));
     });
   };
 
