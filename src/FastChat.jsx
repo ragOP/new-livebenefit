@@ -35,7 +35,7 @@ export default function Chatbot() {
         sender: "bot",
       },
       {
-        text: "Emily this side. Let’s find out if you qualify for the $5800 Spending Allowance — it’s quick and only takes 2 minutes!",
+        text: "Emily this side. Let’s find out if you qualify for the $6400 Spending Allowance — it’s quick and only takes 2 minutes!",
         sender: "bot",
         time: new Date().toTimeString(),
       },
@@ -197,7 +197,7 @@ export default function Chatbot() {
           sender: "bot",
         },
         {
-          text: "Based on what you've told me, you’re eligible for the $5800 Spending Allowance!",
+          text: "Based on what you've told me, you’re eligible for the $6400 Spending Allowance!",
           sender: "bot",
         },
       ];
