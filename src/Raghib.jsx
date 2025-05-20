@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import "./raghib.css";
+import './css/rag.css'
 import emily from "./images/emily.jpg";
 import yesBtn from "./images/yes-btn.png";
 import hyIcon from "./images/hy-icon.png";
