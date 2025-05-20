@@ -180,7 +180,7 @@ li {
     float: left;
     width: 100%;
     min-height: 100vh;
-    background: url('./images/bnr-bg.jpg') no-repeat center top #b3eac2;
+    background: url('../images/bnr-bg.jpg') no-repeat center top #b3eac2;
     background-size: cover;
     display: flex;
     flex-wrap: wrap;
