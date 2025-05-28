@@ -7,20 +7,7 @@
    Base Styles
    ========================================================================== */
 
-body {
-    top: 0;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    margin: auto;
-    padding: 0;
-    background: #fff;
-    text-align: center;
-    -webkit-font-smoothing: antialiased;
-    -moz-font-smoothing: antialiased;
-    font-family: Mulish;
-    font-weight: 400;
-}
+
 
 div,
 form,
@@ -53,6 +40,8 @@ a:hover {
     text-decoration: none;
 }
 
+
+
 img {
     border: none;
     max-width: 100%;
@@ -77,6 +66,21 @@ li {
 /* ==========================================================================
    Font Faces
    ========================================================================== */
+.app-container{
+        top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin: auto;
+    padding: 0;
+    background: #fff;
+    text-align: center;
+    -webkit-font-smoothing: antialiased;
+    -moz-font-smoothing: antialiased;
+    font-family: Mulish;
+    font-weight: 400;
+}
+
 
 @font-face {
     font-family: Mulish;
