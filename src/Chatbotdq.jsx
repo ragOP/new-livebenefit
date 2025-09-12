@@ -204,7 +204,7 @@ export default function Chatbot() {
         <div className="flex items-center justify-between w-full">
           <div>
             <div className="flex items-center gap-3">
-              <p className="font-bold text-sm">Live Benefit Helpline</p>
+              <p className="font-bold text-sm">Auto Rate Cut Helpline</p>
               <img src={tick} className="w-4 h-4"  style={{marginLeft:"-6px"}}/>
             </div>
             <p className="text-sm ">online</p>
