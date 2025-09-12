@@ -20,7 +20,6 @@ export default function Chatbot() {
   const [showInput, setShowInput] = useState(false);
   const [currentOptions, setCurrentOptions] = useState([]);
   const [finalMessage, setFinalMessage] = useState(false);
-  const [switchNumber, setSwitchNumber] = useState(false);
   const messagesEndRef = useRef(null);
 
   const getFormattedTime = (timeString) => {
@@ -34,14 +33,14 @@ export default function Chatbot() {
         sender: "bot",
       },
       {
-        text: "Emily this side. Let’s find out if you qualify for the $5800 Spending Allowance — it’s quick and only takes 2 minutes!",
+        text: "Emily this side. Let’s find out how much money we can save you in Auto Insurance Coverage — it’s quick and only takes 2 minutes!",
         sender: "bot",
         time: new Date().toTimeString(),
       },
       {
         text: "Tap 'Yes' to get started! ⬇️",
         sender: "bot",
-        options: ["👉 Yes! Show me how to claim!"],
+        options: ["👉 Yes, I'm Ready!"],
         time: new Date().toTimeString(),
       },
     ];
@@ -71,7 +70,7 @@ export default function Chatbot() {
   };
 
   const handleOptionClick = (option) => {
-    if (option === "👉 Yes! Show me how to claim!") {
+    if (option === "👉 Yes, I'm Ready!") {
       setMessages((prev) => [
         ...prev,
         { text: "Yes", sender: "user", time: new Date().toTimeString() },
@@ -86,20 +85,20 @@ export default function Chatbot() {
     setCurrentOptions([]);
     let botResponses = [];
 
-    if (option === "👉 Yes! Show me how to claim!") {
+    if (option === "👉 Yes, I'm Ready!") {
       botResponses = [
         {
-          text: "Awesome! Let's get you the benefit ASAP. I just need to ask you a couple of quick questions.",
+          text: "Awesome! First, I just need to ask you a couple of quick questions.",
           sender: "bot",
         },
         {
-          text: "Are you under the age of 65?",
+          text: "Are you over the age of 21?",
           sender: "bot",
-          options: ["Yes, I am under 65", "No, I am over 65"],
+          options: ["Yes, I am over 21", "No, I am under 21"],
         },
       ];
     } else if (
-      option === "Yes, I am under 65"
+      option === "Yes, I am over 21" || option === "No, I am under 21"
     ) {
       botResponses = [
         {
@@ -108,73 +107,42 @@ export default function Chatbot() {
           options: ["Yes ", "No "],
         },
       ];
-    }else if (
-      option === "No, I am over 65"
-    ) {
+    }else if (option === "Yes " || option === "No ") {
       botResponses = [
         {
-          text: "Unfortunately, you don’t qualify for this Spending Allowance.",
+          text: "How old is your car?",
           sender: "bot",
-        },
-        {
-          text: "BUT, based on what you’ve told me, I see you qualify for a Food Allowance Card worth thousands of dollars!",
-          sender: "bot",
-        },
-        {
-          text: "Are you interested in claiming it?",
-          sender: "bot",
-          options: [" Yes", " No"],
+          options: ["0-1 year old", "1-3 years old", "3+ years old"],
         },
       ];
-    }
-    else if (option === "Yes " || option === "No ") {
+    }else if (option === "0-1 year old" || option === "1-3 years old" || option === "3+ years old") {
       botResponses = [
         {
-          text: "Are you on Medicare or Medicaid?",
+          text: "Do you drive your car at least once a week?",
           sender: "bot",
-          options: ["  Yes", "No"],
-        },
+          options: [" Yes", " No"]
+        }
       ];
-    }else if (option === " Yes") {
+    }else if (option === " Yes" || option === " No") {
       botResponses = [
         {
-          text: "Great, I’ve qualified you for the Food Allowance Card, worth thousands of dollars a year.",
+          text: "Okay, one last question.",
           sender: "bot",
         },
         {
-          text: "This card can be used at all grocery & medical store across United States.",
+          text: "Any DUI's in the last 6 months?",
           sender: "bot",
-        },
+          options: ["Yes", "No"]
+        }
       ];
-      setSwitchNumber(true);
-      setTimeout(() => {
-        setFinalMessage(true);
-      }, 4000);
-    }
-    else if (option === "  Yes"){
+    }else if (option === "Yes" || option === "No") {
       botResponses = [
         {
-          text: "Sorry you don’t qualify",
-          sender: "bot",
-        },
-      ];
-    }
-    else if (option === " No"){
-      botResponses = [
-        {
-          text: "Sorry you don’t qualify",
-          sender: "bot",
-        },
-      ];
-    }
-    else if (option === "Yes" || option === "No") {
-      botResponses = [
-        {
-          text: "🎉 Fantastic news! You're one step away from securing your benefit",
+          text: "🎉 Fantastic news!",
           sender: "bot",
         },
         {
-          text: "Based on what you've told me, you’re eligible for the $5800 Spending Allowance!",
+          text: "Based on what you've told me, you’re eligible for a Discounted Auto Insurance Plan with the best coverage!",
           sender: "bot",
         },
       ];
@@ -350,7 +318,7 @@ export default function Chatbot() {
             ))}
           </div>
         )}
-        {finalMessage && <CallToActiondq finalMessage={finalMessage} switchNumber={switchNumber}/>}
+        {finalMessage && <CallToActiondq finalMessage={finalMessage} />}
 
         <div ref={messagesEndRef} />
       </div>
