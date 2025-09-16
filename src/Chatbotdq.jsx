@@ -2,16 +2,33 @@ import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import agent from "../src/assets/pic.png";
 import tick from "../src/assets/tick2.png";
-import deliver from "../src/assets/delivered.svg"
-import {
-  CheckCheck,
-  EllipsisVertical,
-  Paperclip,
-  Phone,
-  Send,
-  SendHorizontalIcon,
-} from "lucide-react";
+import deliver from "../src/assets/delivered.svg";
+import { EllipsisVertical, Paperclip, Phone, SendHorizontalIcon } from "lucide-react";
 import CallToActiondq from "./components/CallToAction";
+
+// --- constants: match the original page's params exactly ---
+const PERSISTED_KEYS = [
+  "subid",
+  "mksite",
+  "fbclid",
+  "mkcampaign",
+  "pixel",
+  "phone",
+  "utm_campaign",
+  "utm_source",
+  "utm_medium",
+  "utm_term",
+  "utm_content",
+  "utm_placement",
+  "campaign_id",
+  "adset_id",
+  "ad_id",
+  "adset_name",
+];
+
+// these are driven by the two questions
+const QUESTION_KEYS = ["insurance_carrier", "insured", "homeowner", "subid1", "subid2", "subid3"];
+const ALL_KEYS = [...PERSISTED_KEYS, ...QUESTION_KEYS];
 
 export default function Chatbot() {
   const [messages, setMessages] = useState([]);
@@ -20,32 +37,60 @@ export default function Chatbot() {
   const [showInput, setShowInput] = useState(false);
   const [currentOptions, setCurrentOptions] = useState([]);
   const [finalMessage, setFinalMessage] = useState(false);
+
+  const [carrierAnswer, setCarrierAnswer] = useState(""); // "GEICO" | "N" etc
+  const [homeownerAnswer, setHomeownerAnswer] = useState(""); // "Yes" | "No"
+  const [insuredAnswer, setInsuredAnswer] = useState("No"); // derived: "No" when carrier === "N", else "Yes"
+
+  // keep whatever was already in the URL so we can keep them on every update
+  const [baseParams, setBaseParams] = useState(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const obj = {};
+    PERSISTED_KEYS.forEach((k) => (obj[k] = sp.get(k) ?? "")); // default to blank if not provided
+    return obj;
+  });
+
   const messagesEndRef = useRef(null);
 
-  const getFormattedTime = (timeString) => {
-    return timeString.split(" ")[0].split(":").slice(0, 2).join(":");
+  // --------------- helpers for URL / logging ---------------
+  const buildMergedParams = (updates) => {
+    // merge persisted + new updates
+    const merged = { ...baseParams, ...updates };
+
+    // always include every key, even if blank, to match original page shape
+    ALL_KEYS.forEach((k) => {
+      if (merged[k] === undefined || merged[k] === null) merged[k] = "";
+    });
+
+    return merged;
   };
 
-  useEffect(() => {
-    const initialMessages = [
-      {
-        text: "Hey there! 👋",
-        sender: "bot",
-      },
-      {
-        text: "Emily this side. Let’s find out how much money we can save you in Auto Insurance Coverage — it’s quick and only takes 2 minutes!",
-        sender: "bot",
-        time: new Date().toTimeString(),
-      },
-      {
-        text: "Tap 'Yes' to get started! ⬇️",
-        sender: "bot",
-        options: ["👉 Yes, I'm Ready!"],
-        time: new Date().toTimeString(),
-      },
-    ];
-    addMessagesWithDelay(initialMessages);
-  }, []);
+  const replaceQueryParams = (updates) => {
+    const merged = buildMergedParams(updates);
+    const url = new URL(window.location.href);
+
+    const sp = new URLSearchParams();
+    // ensure deterministic key order similar to original
+    ALL_KEYS.forEach((k) => sp.set(k, merged[k] ?? ""));
+
+    url.search = `?${sp.toString()}`;
+    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+
+    // logs for verification
+    console.log("[Chatbot] Query params updated ->", url.toString());
+    console.table(
+      ALL_KEYS.reduce((acc, k) => {
+        acc[k] = sp.get(k);
+        return acc;
+      }, /** @type {Record<string,string>} */ ({}))
+    );
+
+    // store new base state
+    setBaseParams((prev) => ({ ...prev, ...updates }));
+  };
+
+  const getFormattedTime = (timeString) =>
+    timeString.split(" ")[0].split(":").slice(0, 2).join(":");
 
   const addMessagesWithDelay = (botResponses) => {
     let delay = 0;
@@ -65,128 +110,148 @@ export default function Chatbot() {
           if (response.options) setCurrentOptions(response.options);
           if (response.input) setShowInput(true);
         }
-      }, (delay += 1000));
+      }, (delay += 800));
     });
   };
 
-  const handleOptionClick = (option) => {
-    if (option === "👉 Yes, I'm Ready!") {
-      setMessages((prev) => [
-        ...prev,
-        { text: "Yes", sender: "user", time: new Date().toTimeString() },
-      ]);
-    } else {
-      setMessages((prev) => [
-        ...prev,
-        { text: option, sender: "user", time: new Date().toTimeString() },
-      ]);
-    }
-    setShowInput(false);
-    setCurrentOptions([]);
-    let botResponses = [];
+  // --------------- initial openers ---------------
+  useEffect(() => {
+    const initialMessages = [
+      { text: "Hey there! 👋", sender: "bot" },
+      {
+        text:
+          "Emily this side. Let’s find out how much money we can save you in Auto Insurance Coverage — it’s quick and only takes 2 minutes!",
+        sender: "bot",
+      },
+      {
+        text: "Tap 'Yes' to get started! ⬇️",
+        sender: "bot",
+        options: ["👉 Yes, I'm Ready!"],
+      },
+    ];
+    addMessagesWithDelay(initialMessages);
+  }, []);
 
-    if (option === "👉 Yes, I'm Ready!") {
-      botResponses = [
-        {
-          text: "Awesome! First, I just need to ask you a couple of quick questions.",
-          sender: "bot",
-        },
-        {
-          text: "Are you over the age of 21?",
-          sender: "bot",
-          options: ["Yes, I am over 21", "No, I am under 21"],
-        },
-      ];
-    } else if (
-      option === "Yes, I am over 21" || option === "No, I am under 21"
-    ) {
-      botResponses = [
-        {
-          text: "Do you live in the United States?",
-          sender: "bot",
-          options: ["Yes ", "No "],
-        },
-      ];
-    }else if (option === "Yes " || option === "No ") {
-      botResponses = [
-        {
-          text: "How old is your car?",
-          sender: "bot",
-          options: ["0-1 year old", "1-3 years old", "3+ years old"],
-        },
-      ];
-    }else if (option === "0-1 year old" || option === "1-3 years old" || option === "3+ years old") {
-      botResponses = [
-        {
-          text: "Do you drive your car at least once a week?",
-          sender: "bot",
-          options: [" Yes", " No"]
-        }
-      ];
-    }else if (option === " Yes" || option === " No") {
-      botResponses = [
-        {
-          text: "Okay, one last question.",
-          sender: "bot",
-        },
-        {
-          text: "Any DUI's in the last 6 months?",
-          sender: "bot",
-          options: ["Yes", "No"]
-        }
-      ];
-    }else if (option === "Yes" || option === "No") {
-      botResponses = [
-        {
-          text: "🎉 Fantastic news!",
-          sender: "bot",
-        },
-        {
-          text: "Based on what you've told me, you’re eligible for a Discounted Auto Insurance Plan with the best coverage!",
-          sender: "bot",
-        },
-      ];
-      setTimeout(() => {
-        setFinalMessage(true);
-      }, 4000);
+  // --------------- scroll ---------------
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      const container = messagesEndRef.current.parentElement;
+      container.scrollTo({
+        top:
+          container.scrollHeight -
+          container.clientHeight -
+          (finalMessage ? 100 : 0),
+        behavior: "smooth",
+      });
     }
-    addMessagesWithDelay(botResponses);
+  }, [messages, finalMessage, isTyping]);
+
+  // --------------- 2-question flow ---------------
+  const CARRIER_OPTIONS = [
+    "Allstate",
+    "GEICO",
+    "State Farm",
+    "Progressive",
+    "Other",
+    "Not insured", // maps to "N"
+  ];
+  const HOMEOWNER_OPTIONS = ["Yes", "No"];
+
+  const startQuiz = () => {
+    addMessagesWithDelay([
+      { text: "Awesome! Just two quick questions.", sender: "bot" },
+      { text: "What is your current insurance carrier?", sender: "bot", options: CARRIER_OPTIONS },
+    ]);
   };
 
+  const askHomeowner = () => {
+    addMessagesWithDelay([
+      { text: "Are you a homeowner?", sender: "bot", options: HOMEOWNER_OPTIONS },
+    ]);
+  };
+
+  const finishAndCongratulate = () => {
+    addMessagesWithDelay([
+      { text: "🎉 Fantastic news!", sender: "bot" },
+      {
+        text:
+          "Based on what you've told me, you’re eligible for a Discounted Auto Insurance Plan with the best coverage!",
+        sender: "bot",
+      },
+    ]);
+    setTimeout(() => setFinalMessage(true), 1200);
+  };
+
+  // ---------- ONLY HERE we push to query params (questions only) ----------
+  const handleCarrierSelection = (label) => {
+    const value = label === "Not insured" ? "N" : label; // match original "N"
+    setCarrierAnswer(value);
+
+    const insured = value === "N" ? "No" : "Yes";
+    setInsuredAnswer(insured);
+
+    // match original mapping: subid3 = carrier, subid2 = insured
+    replaceQueryParams({
+      insurance_carrier: value, // ex: "N" | "GEICO" | "Other"
+      insured: insured,         // "Yes" | "No"
+      subid3: value,
+      subid2: insured,
+    });
+
+    askHomeowner();
+  };
+
+  const handleHomeownerSelection = (value) => {
+    setHomeownerAnswer(value);
+
+    // match original mapping: subid1 = homeowner
+    replaceQueryParams({
+      homeowner: value, // "Yes" | "No"
+      subid1: value,
+    });
+
+    finishAndCongratulate();
+  };
+
+  // --------------- options dispatcher ---------------
+  const handleOptionClick = (option) => {
+    const echoed = option === "👉 Yes, I'm Ready!" ? "Yes" : option;
+    setMessages((prev) => [
+      ...prev,
+      { text: echoed, sender: "user", time: new Date().toTimeString() },
+    ]);
+
+    setShowInput(false);
+    setCurrentOptions([]);
+
+    if (option === "👉 Yes, I'm Ready!") {
+      startQuiz();
+      return;
+    }
+
+    if (CARRIER_OPTIONS.includes(option)) {
+      handleCarrierSelection(option);
+      return;
+    }
+
+    if (HOMEOWNER_OPTIONS.includes(option)) {
+      handleHomeownerSelection(option);
+      return;
+    }
+  };
+
+  // (optional) you kept this; not used in 2Q flow
   const handleSendInput = () => {
     if (inputValue.trim() === "") return;
     setMessages((prev) => [...prev, { text: inputValue, sender: "user" }]);
     setInputValue("");
     setShowInput(false);
-    let botResponses = [
+    addMessagesWithDelay([
       { text: `Nice to meet you, ${inputValue}!`, sender: "bot" },
-      {
-        text: "Let's begin your Soulmate Portrait.",
-        sender: "bot",
-        options: ["Start"],
-      },
-    ];
-    addMessagesWithDelay(botResponses);
+      { text: "Tap to get started.", sender: "bot", options: ["👉 Yes, I'm Ready!"] },
+    ]);
   };
 
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      const container = messagesEndRef.current.parentElement;
-      if(finalMessage){
-        container.scrollTo({
-          top: container.scrollHeight - container.clientHeight - 100,
-          behavior: "smooth",
-        });
-      }else{
-        container.scrollTo({
-          top: container.scrollHeight - container.clientHeight,
-          behavior: "smooth",
-        });
-      }
-    }
-  }, [messages, finalMessage, isTyping]);
-  
-  
   return (
     <div
       className="w-full h-screen flex flex-col bg-cover bg-center"
@@ -196,18 +261,14 @@ export default function Chatbot() {
       }}
     >
       <div className="bg-[#005e54] text-white p-4 flex items-center gap-2 shadow-md sticky top-0 right-0 left-0 z-10 h-16">
-        <img
-          src={agent}
-          alt="Psychic Master"
-          className="w-10 h-10 rounded-full"
-        />
+        <img src={agent} alt="Agent" className="w-10 h-10 rounded-full" />
         <div className="flex items-center justify-between w-full">
           <div>
             <div className="flex items-center gap-3">
               <p className="font-bold text-sm">Auto Rate Cut Helpline</p>
-              <img src={tick} className="w-4 h-4"  style={{marginLeft:"-6px"}}/>
+              <img src={tick} className="w-4 h-4" style={{ marginLeft: "-6px" }} />
             </div>
-            <p className="text-sm ">online</p>
+            <p className="text-sm">online</p>
           </div>
           <div className="flex items-center gap-3">
             <Phone className="w-5 h-5 text-white" />
@@ -218,55 +279,45 @@ export default function Chatbot() {
       </div>
 
       <div className="flex-1 p-4 space-y-2 overflow-y-auto flex flex-col mt-[1%] pb-52">
-        {messages.map((msg, index) => {
-          return (
+        {messages.map((msg, index) => (
+          <motion.div
+            key={index}
+            initial={{ opacity: 0, x: msg.sender === "bot" ? -50 : 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className={`flex relative ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
+          >
+            {msg.sender === "bot" && msg.lastInSequence && (
+              <img
+                src={agent}
+                alt="Bot"
+                className="w-8 h-8 rounded-full mr-2 absolute bottom-0"
+              />
+            )}
             <motion.div
-              key={index}
-              initial={{ opacity: 0, x: msg.sender === "bot" ? -50 : 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
-              className={`flex relative ${
-                msg.sender === "user" ? "justify-end" : "justify-start"
+              initial={{ width: 0, height: 15 }}
+              animate={{ width: "auto", height: "auto" }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className={`pt-2 px-2 pb-0 rounded-lg text-base shadow-md ${
+                msg.sender === "user"
+                  ? "bg-[#dcf8c6] text-gray-800"
+                  : "bg-white text-gray-800 ms-10"
               }`}
+              style={{ minWidth: "70px", overflow: "hidden" }}
             >
-              {msg.sender === "bot" && msg.lastInSequence && (
-                <img
-                  src={agent}
-                  alt="Bot"
-                  className="w-8 h-8 rounded-full mr-2 absolute bottom-0"
-                />
-              )}
-              <motion.div
-                initial={{ width: 0, height: 15 }}
-                animate={{ width: "auto", height: "auto" }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
-                className={`pt-2 px-2 pb-0 rounded-lg text-base shadow-md ${
-                  msg.sender === "user"
-                    ? "bg-[#dcf8c6] text-gray-800"
-                    : "bg-white text-gray-800 ms-10"
-                }`}
-                style={{ minWidth: "70px", overflow: "hidden" }}
-              >
-                <motion.span
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.3 }}
-                >
-                  {msg.text}
-                </motion.span>
+              <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
+                {msg.text}
+              </motion.span>
 
-                <span className="flex flex-row-reverse gap-1 items-center">
-                  {msg.sender === "user" && (
-                    <img src={deliver} className="h-4 w-4" />
-                  )}
-                  <span className="text-[10px] text-gray-400">
-                    {getFormattedTime(msg.time)}
-                  </span>
+              <span className="flex flex-row-reverse gap-1 items-center">
+                {msg.sender === "user" && <img src={deliver} className="h-4 w-4" />}
+                <span className="text-[10px] text-gray-400">
+                  {getFormattedTime(msg.time)}
                 </span>
-              </motion.div>
+              </span>
             </motion.div>
-          );
-        })}
+          </motion.div>
+        ))}
 
         {isTyping && (
           <motion.div
@@ -282,12 +333,13 @@ export default function Chatbot() {
               transition={{ duration: 0.5 }}
               className="max-w-xs p-2 rounded-lg text-sm bg-white text-gray-800 flex items-center gap-1"
             >
-              <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-              <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-              <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
+              <div className="w-2 h-2 rounded-full bg-gray-500 animate-bounce [animation-delay:-0.3s]"></div>
+              <div className="w-2 h-2 rounded-full bg-gray-500 animate-bounce [animation-delay:-0.15s]"></div>
+              <div className="w-2 h-2 rounded-full bg-gray-500 animate-bounce"></div>
             </motion.div>
           </motion.div>
         )}
+
         {showInput && (
           <div className="mt-2 flex items-center gap-2 justify-end">
             <input
@@ -305,6 +357,7 @@ export default function Chatbot() {
             </button>
           </div>
         )}
+
         {currentOptions.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-2 items-center justify-start ms-10">
             {currentOptions.map((option, i) => (
@@ -318,6 +371,8 @@ export default function Chatbot() {
             ))}
           </div>
         )}
+
+        {/* your CTA stays exactly as-is */}
         {finalMessage && <CallToActiondq finalMessage={finalMessage} />}
 
         <div ref={messagesEndRef} />
