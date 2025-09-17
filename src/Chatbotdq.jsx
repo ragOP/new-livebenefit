@@ -1,10 +1,11 @@
+// src/Chatbot.jsx
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import agent from "../src/assets/pic.png";
 import tick from "../src/assets/tick2.png";
 import deliver from "../src/assets/delivered.svg";
 import { EllipsisVertical, Paperclip, Phone, SendHorizontalIcon } from "lucide-react";
-import CallToActiondq from "./components/CallToAction";
+import CallToActiondq from "./components/CallToActiondq";
 
 // --- constants: match the original page's params exactly ---
 const PERSISTED_KEYS = [
@@ -57,7 +58,6 @@ export default function Chatbot() {
   // --------------- helpers for URL / logging ---------------
   const buildMergedParams = (updates) => {
     const merged = { ...baseParams, ...updates };
-    // always include every key, even if blank, to match original page shape
     ALL_KEYS.forEach((k) => {
       if (merged[k] === undefined || merged[k] === null) merged[k] = "";
     });
@@ -71,19 +71,16 @@ export default function Chatbot() {
     const url = new URL(window.location.href);
 
     const sp = new URLSearchParams();
-    // ensure deterministic key order similar to original
     ALL_KEYS.forEach((k) => sp.set(k, merged[k] ?? ""));
 
     url.search = `?${sp.toString()}`;
     window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
 
-    // logs for verification
     console.log("[Chatbot] Query params updated ->", url.toString());
     const tableObj = {};
     ALL_KEYS.forEach((k) => (tableObj[k] = sp.get(k) || ""));
     console.table(tableObj);
 
-    // store new base state
     setBaseParams((prev) => ({ ...prev, ...updates }));
   };
 
@@ -191,12 +188,10 @@ export default function Chatbot() {
     const insured = value === "N" ? "No" : "Yes";
     setInsuredAnswer(insured);
 
-    // REQUIRED MAPPING:
-    // subid3 = carrier name
-    // subid2 = insured (Yes/No)
+    // subid3 = carrier, subid2 = insured
     replaceQueryParams({
-      insurance_carrier: value, // ex: "N" | "GEICO" | "Other"
-      insured: insured,         // "Yes" | "No"
+      insurance_carrier: value,
+      insured: insured,
       subid3: value,
       subid2: insured,
     });
@@ -207,10 +202,9 @@ export default function Chatbot() {
   const handleHomeownerSelection = (value) => {
     setHomeownerAnswer(value);
 
-    // REQUIRED MAPPING:
-    // subid1 = homeowner (Yes/No)
+    // subid1 = homeowner
     replaceQueryParams({
-      homeowner: value, // "Yes" | "No"
+      homeowner: value,
       subid1: value,
     });
 
@@ -267,7 +261,7 @@ export default function Chatbot() {
           <div>
             <div className="flex items-center gap-3">
               <p className="font-bold text-sm">Auto Rate Cut Helpline</p>
-              <img src={tick} className="w-4 h-4" style={{ marginLeft: "-6px" }} />
+              <img src={tick} className="w-4 h-4" style={{ marginLeft: "-6px" }} alt="" />
             </div>
             <p className="text-sm">online</p>
           </div>
@@ -334,9 +328,9 @@ export default function Chatbot() {
               transition={{ duration: 0.5 }}
               className="max-w-xs p-2 rounded-lg text-sm bg-white text-gray-800 flex items-center gap-1"
             >
-              <div className="w-2 h-2 rounded-full bg-gray-500 animate-bounce [animation-delay:-0.3s]"></div>
-              <div className="w-2 h-2 rounded-full bg-gray-500 animate-bounce [animation-delay:-0.15s]"></div>
-              <div className="w-2 h-2 rounded-full bg-gray-500 animate-bounce"></div>
+              <div className="w-2 h-2 rounded-full animate-bounce [animation-delay:-0.3s] bg-gray-500"></div>
+              <div className="w-2 h-2 rounded-full animate-bounce [animation-delay:-0.15s] bg-gray-500"></div>
+              <div className="w-2 h-2 rounded-full animate-bounce bg-gray-500"></div>
             </motion.div>
           </motion.div>
         )}
@@ -373,8 +367,11 @@ export default function Chatbot() {
           </div>
         )}
 
-        {/* your CTA stays exactly as-is */}
-        {finalMessage && <CallToActiondq finalMessage={finalMessage} />}
+        {/* CTA now dynamically receives DNI number */}
+        {finalMessage && <CallToActiondq 
+        siteId="1723"
+        campaignId="325675"
+        finalMessage={finalMessage} />}
 
         <div ref={messagesEndRef} />
       </div>
