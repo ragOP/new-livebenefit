@@ -38,15 +38,17 @@ export default function Chatbot() {
   const [currentOptions, setCurrentOptions] = useState([]);
   const [finalMessage, setFinalMessage] = useState(false);
 
+  // kept here if you want to reference answers later
   const [carrierAnswer, setCarrierAnswer] = useState(""); // "GEICO" | "N" etc
   const [homeownerAnswer, setHomeownerAnswer] = useState(""); // "Yes" | "No"
   const [insuredAnswer, setInsuredAnswer] = useState("No"); // derived: "No" when carrier === "N", else "Yes"
 
   // keep whatever was already in the URL so we can keep them on every update
   const [baseParams, setBaseParams] = useState(() => {
+    if (typeof window === "undefined") return {};
     const sp = new URLSearchParams(window.location.search);
     const obj = {};
-    PERSISTED_KEYS.forEach((k) => (obj[k] = sp.get(k) ?? "")); // default to blank if not provided
+    PERSISTED_KEYS.forEach((k) => (obj[k] = sp.get(k) ?? ""));
     return obj;
   });
 
@@ -54,18 +56,17 @@ export default function Chatbot() {
 
   // --------------- helpers for URL / logging ---------------
   const buildMergedParams = (updates) => {
-    // merge persisted + new updates
     const merged = { ...baseParams, ...updates };
-
     // always include every key, even if blank, to match original page shape
     ALL_KEYS.forEach((k) => {
       if (merged[k] === undefined || merged[k] === null) merged[k] = "";
     });
-
     return merged;
   };
 
   const replaceQueryParams = (updates) => {
+    if (typeof window === "undefined") return;
+
     const merged = buildMergedParams(updates);
     const url = new URL(window.location.href);
 
@@ -78,12 +79,9 @@ export default function Chatbot() {
 
     // logs for verification
     console.log("[Chatbot] Query params updated ->", url.toString());
-    console.table(
-      ALL_KEYS.reduce((acc, k) => {
-        acc[k] = sp.get(k);
-        return acc;
-      }, /** @type {Record<string,string>} */ ({}))
-    );
+    const tableObj = {};
+    ALL_KEYS.forEach((k) => (tableObj[k] = sp.get(k) || ""));
+    console.table(tableObj);
 
     // store new base state
     setBaseParams((prev) => ({ ...prev, ...updates }));
@@ -132,17 +130,22 @@ export default function Chatbot() {
     addMessagesWithDelay(initialMessages);
   }, []);
 
+  // normalize URL once so all keys exist from the start
+  useEffect(() => {
+    replaceQueryParams({});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // --------------- scroll ---------------
   useEffect(() => {
     if (messagesEndRef.current) {
       const container = messagesEndRef.current.parentElement;
-      container.scrollTo({
-        top:
-          container.scrollHeight -
-          container.clientHeight -
-          (finalMessage ? 100 : 0),
-        behavior: "smooth",
-      });
+      if (container) {
+        container.scrollTo({
+          top: container.scrollHeight - container.clientHeight - (finalMessage ? 100 : 0),
+          behavior: "smooth",
+        });
+      }
     }
   }, [messages, finalMessage, isTyping]);
 
@@ -165,9 +168,7 @@ export default function Chatbot() {
   };
 
   const askHomeowner = () => {
-    addMessagesWithDelay([
-      { text: "Are you a homeowner?", sender: "bot", options: HOMEOWNER_OPTIONS },
-    ]);
+    addMessagesWithDelay([{ text: "Are you a homeowner?", sender: "bot", options: HOMEOWNER_OPTIONS }]);
   };
 
   const finishAndCongratulate = () => {
@@ -182,7 +183,7 @@ export default function Chatbot() {
     setTimeout(() => setFinalMessage(true), 1200);
   };
 
-  // ---------- ONLY HERE we push to query params (questions only) ----------
+  // ---------- push to query params (questions only) ----------
   const handleCarrierSelection = (label) => {
     const value = label === "Not insured" ? "N" : label; // match original "N"
     setCarrierAnswer(value);
@@ -190,7 +191,9 @@ export default function Chatbot() {
     const insured = value === "N" ? "No" : "Yes";
     setInsuredAnswer(insured);
 
-    // match original mapping: subid3 = carrier, subid2 = insured
+    // REQUIRED MAPPING:
+    // subid3 = carrier name
+    // subid2 = insured (Yes/No)
     replaceQueryParams({
       insurance_carrier: value, // ex: "N" | "GEICO" | "Other"
       insured: insured,         // "Yes" | "No"
@@ -204,7 +207,8 @@ export default function Chatbot() {
   const handleHomeownerSelection = (value) => {
     setHomeownerAnswer(value);
 
-    // match original mapping: subid1 = homeowner
+    // REQUIRED MAPPING:
+    // subid1 = homeowner (Yes/No)
     replaceQueryParams({
       homeowner: value, // "Yes" | "No"
       subid1: value,
@@ -216,10 +220,7 @@ export default function Chatbot() {
   // --------------- options dispatcher ---------------
   const handleOptionClick = (option) => {
     const echoed = option === "👉 Yes, I'm Ready!" ? "Yes" : option;
-    setMessages((prev) => [
-      ...prev,
-      { text: echoed, sender: "user", time: new Date().toTimeString() },
-    ]);
+    setMessages((prev) => [...prev, { text: echoed, sender: "user", time: new Date().toTimeString() }]);
 
     setShowInput(false);
     setCurrentOptions([]);
@@ -240,10 +241,10 @@ export default function Chatbot() {
     }
   };
 
-  // (optional) you kept this; not used in 2Q flow
+  // (optional) not used in 2Q flow
   const handleSendInput = () => {
     if (inputValue.trim() === "") return;
-    setMessages((prev) => [...prev, { text: inputValue, sender: "user" }]);
+    setMessages((prev) => [...prev, { text: inputValue, sender: "user", time: new Date().toTimeString() }]);
     setInputValue("");
     setShowInput(false);
     addMessagesWithDelay([
@@ -310,9 +311,9 @@ export default function Chatbot() {
               </motion.span>
 
               <span className="flex flex-row-reverse gap-1 items-center">
-                {msg.sender === "user" && <img src={deliver} className="h-4 w-4" />}
+                {msg.sender === "user" && <img src={deliver} className="h-4 w-4" alt="" />}
                 <span className="text-[10px] text-gray-400">
-                  {getFormattedTime(msg.time)}
+                  {msg.time ? getFormattedTime(msg.time) : ""}
                 </span>
               </span>
             </motion.div>
